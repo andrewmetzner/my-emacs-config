@@ -1,0 +1,137 @@
+#+BEGIN_SRC emacs-lisp
+(require 'package)
+
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+(package-initialize)
+
+(require 'auth-source)
+(setq auth-sources '("~/.authinfo.gpg"))
+
+(load-theme 'wombat t)
+(global-font-lock-mode 1)
+(tool-bar-mode -1)
+(menu-bar-mode -1)
+(scroll-bar-mode -1)
+(setq column-number-mode t)
+
+(require 'calendar)
+(setq inhibit-startup-message t)
+
+(defun my-anniversary-ymd (year month day)
+  (let* ((now (decode-time (current-time)))
+         (tyear year)
+         (tmonth month)
+         (tday day)
+         (cyear (nth 5 now))
+         (cmonth (nth 4 now))
+         (cday (nth 3 now))
+         (y (- cyear tyear))
+         (m (- cmonth tmonth))
+         (d (- cday tday)))
+
+    (when (< d 0)
+      (setq m (1- m))
+      (setq d (+ d (calendar-last-day-of-month (if (= cmonth 1) 12 (1- cmonth))
+                                               (if (= cmonth 1) (1- cyear) cyear)))))
+
+    (when (< m 0)
+      (setq y (1- y))
+      (setq m (+ m 12)))
+    (list y m d)))
+
+(defun my-anniversary-ymd-string (year month day label)
+  (let* ((ymd (my-anniversary-ymd year month day))
+         (y (nth 0 ymd))
+         (m (nth 1 ymd))
+         (d (nth 2 ymd)))
+    (format ";; %s - %d %s, %d %s, %d %s"
+            label
+            y (if (= y 1) "year" "years")
+            m (if (= m 1) "month" "months")
+            d (if (= d 1) "day" "days"))))
+
+(setq initial-scratch-message
+      (concat ";; Hello world.\n"
+              "\n"
+              (my-anniversary-ymd-string 2018 10 16 "Clean") "\n"
+              (my-anniversary-ymd-string 2024 10 25 "Release") "\n"
+	      "\n" (my-anniversary-ymd-string 2026 01 01 "<3") "\n"
+
+              ;; (my-anniversary-ymd-string 2025 09 07 "test")
+      ))
+
+(tab-bar-mode 1)
+
+(global-goto-address-mode +1)
+
+(global-set-key (kbd "C-c d")
+    (lambda()
+      (interactive)
+      (find-file "~/.emacs")))
+
+(global-set-key (kbd "C-c e")
+    (lambda()
+      (interactive)
+      (find-file "~/.emacs.d")))
+
+(set-frame-parameter nil 'alpha-background 80)
+
+(defun no-transparency ()
+  "Set the current Emacs frame to fully opaque (no transparency)."
+  (interactive)
+  (set-frame-parameter nil 'alpha-background 100)
+  (message "Transparency disabled: alpha-background set to 100"))
+
+(set-face-attribute 'tab-bar nil
+                    :background "#3C3C3C"
+                    :foreground "#F8F8F2"
+                    :weight 'bold)
+
+(set-face-attribute 'tab-bar-tab nil
+                    :background "#505050"  
+                    :foreground "#F8F8F2"
+                    :weight 'bold)
+
+(set-face-attribute 'tab-bar-tab-inactive nil
+                    :background "#2D2D2D"
+                    :foreground "#757575"
+                    :weight 'bold)
+
+
+
+
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(erc-current-nick-face ((t (:foreground "red" :weight bold))))
+ '(erc-input-face ((t (:foreground "red"))))
+ '(erc-my-nick-face ((t (:foreground "red" :weight bold))))
+ '(jabber-activity-personal-face ((t (:foreground "cyan" :weight bold))))
+ '(jabber-chat-prompt-local ((t (:foreground "cyan" :weight bold))))
+ '(jabber-rare-time-face ((t (:foreground "green" :underline t))))
+ '(jabber-roster-user-away ((t (:foreground "yellow" :slant italic :weight normal))))
+ '(jabber-roster-user-online ((t (:foreground "cyan" :slant normal :weight bold))))
+ '(jabber-title-large ((t (:inherit variable-pitch :weight bold :height 2.0 :width ultra-expanded))))
+ '(jabber-title-medium ((t (:inherit variable-pitch :weight bold :height 1.5 :width expanded)))))
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(jabber-avatar-max-height 0)
+ '(jabber-avatar-max-width 0)
+ '(jabber-chat-buffer-show-avatar nil t)
+ '(jabber-vcard-avatars-retrieve nil t)
+ '(org-pomodoro-audio-player "paplay")
+ '(package-selected-packages nil)
+ '(pdf-annot-default-annotation-properties
+   '((t (label . "Andrew Metzner"))
+     (text (color . "#ff0000") (icon . "Note"))
+     (highlight (color . "deep sky blue"))
+     (underline (color . "blue")) (squiggly (color . "orange"))
+     (strike-out (color . "red"))))
+ '(pdf-view-midnight-colors '("#FFFFFF" . "#000000")))
+#+END_SRC

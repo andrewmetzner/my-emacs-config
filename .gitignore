@@ -1,0 +1,10 @@
+*
+
+!init.el
+!config.org
+!theme.org
+!.gitignore
+
+*~
+\#*\#
+.\#*

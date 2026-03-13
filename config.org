@@ -1,0 +1,779 @@
+#+STARTUP: overview
+
+* java
+#+BEGIN_SRC emacs-lisp
+ 
+    (use-package treemacs
+      :ensure t
+      :defer nil) 
+      (use-package xml
+        :ensure nil)
+
+      (use-package dap-mode
+        :defer t)
+
+        (use-package lsp-mode
+            :ensure t
+            :hook (java-mode . lsp)
+            :commands lsp)
+
+          (use-package lsp-java
+            :ensure t
+            :after lsp
+            :config
+            (add-hook 'java-mode-hook #'lsp))
+
+          (use-package company
+            :ensure t
+            :hook (after-init . global-company-mode))
+
+          (setq lsp-headerline-breadcrumb-enable nil)
+          (setq lsp-enable-symbol-highlighting t)
+
+          (with-eval-after-load 'lsp-mode
+            (define-key lsp-mode-map (kbd "C-c l r") #'lsp-rename)
+            (define-key lsp-mode-map (kbd "C-c l a") #'lsp-execute-code-action))
+
+  (defun java-eshell ()
+    (interactive)
+    (unless (buffer-file-name)
+      (error "Buffer is not visiting a file"))
+    (let* ((file (buffer-file-name))
+           (classname (file-name-base file))
+           (cmd (format "javac %s && java %s" (shell-quote-argument file) classname))
+           (bufname (format "*Java Run: %s*" classname))
+           eshell-buffer)
+     
+      (setq eshell-buffer (get-buffer bufname))
+      (if eshell-buffer
+      
+          (switch-to-buffer-other-window eshell-buffer)
+        
+        (split-window-below)
+        (other-window 1)
+        (setq eshell-buffer (eshell 'N))
+        (rename-buffer bufname)
+        (switch-to-buffer eshell-buffer))
+ 
+      (unless (get-buffer-process eshell-buffer)
+        (eshell 'N))
+      
+      (let ((inhibit-read-only t))
+        (erase-buffer))
+   
+      (goto-char (point-max))
+      (insert cmd)
+      (eshell-send-input)))
+
+  (add-hook 'java-mode-hook
+            (lambda ()
+              (local-set-key (kbd "<f5>") #'java-eshell)))
+    
+#+END_SRC
+  
+* org mode
+#+BEGIN_SRC emacs-lisp
+        (require 'org)
+        (use-package htmlize
+          :ensure t)
+        (add-hook 'org-mode-hook #'visual-line-mode)
+        (setq
+         org-directory "~/org/"
+         org-agenda-files (list org-directory)
+         org-tags-column -60
+
+         ;; TODO keywords and log settings
+         org-todo-keywords '((sequence "TODO(t)" "WAIT(w!)" "WORK(r!)" "|" "CANCEL(c!)" "DONE(d!)" "CLOCKED(f!)"))
+         org-log-done 'time
+         org-log-into-drawer t
+         org-insert-heading-respect-content t
+         org-M-RET-may-split-line '((default . nil))
+
+         ;; Calendar markers
+         org-hide-emphasis-markers nil
+         calendar-mark-holidays-flag t)
+
+        ;; Keybindings for Org commands
+        (global-set-key (kbd "C-c l") #'org-store-link)
+        (global-set-key (kbd "C-c a") #'org-agenda)
+        (global-set-key (kbd "C-c c") #'org-capture)
+
+        (setq org-html-postamble t)  ; explicitly enable it
+        (setq org-html-postamble-format
+              '(("en" "<p class=\"date\">Last modified: %C</p>
+         <p class=\"creator\">%c</p>")))
+
+      ;; (defun insert-system-time ()
+      ;;   "Insert the current system time in ISO format."
+      ;;   (interactive)
+      ;;   (insert (format-time-string "%Y-%m-%dT%H:%M:%S%z")))
+    (defun insert-system-time ()
+      "Insert the current system time in ISO format with colon in timezone offset."
+      (interactive)
+      (let* ((raw (format-time-string "%Y-%m-%dT%H:%M:%S%z"))
+             ;; Insert colon before last two digits of timezone
+             (fixed (replace-regexp-in-string
+                     "\\([+-][0-9][0-9]\\)\\([0-9][0-9]\\)$"
+                     "\\1:\\2"
+                     raw)))
+        (insert fixed)))
+
+
+      (with-eval-after-load 'org
+        (define-key org-mode-map (kbd "C-c t") 'insert-system-time))
+
+  (defun my/org-add-greentext ()
+    (font-lock-add-keywords 
+     nil 
+     '(("^\\s-*\\(>.*\\)$" 1 '(:foreground "#22FF22") t))))
+
+  (add-hook 'org-mode-hook #'my/org-add-greentext)
+
+  (with-eval-after-load 'org
+  ;; Level 1: Champagne Gold + Bottom Border
+  (set-face-attribute 'org-level-1 nil 
+    :foreground "#fdfd96" :background "#3E3B2E" :weight 'ultra-bold :height 1.3 :underline "#fdfd96")
+  
+  ;; Level 2: Periwinkle + Bottom Border
+  (set-face-attribute 'org-level-2 nil 
+    :foreground "#b2cefe" :background "#2E333E" :weight 'bold :height 1.15 :underline "#b2cefe")
+  
+  ;; Level 3: Lavender + Bottom Border
+  (set-face-attribute 'org-level-3 nil 
+    :foreground "#e0bbe4" :background "#372E3E" :weight 'bold :height 1.05 :underline "#e0bbe4")
+  
+  ;; Level 4: Pale Amber (Clean & Italic)
+  (set-face-attribute 'org-level-4 nil :foreground "#ffecb3" :weight 'bold :slant 'italic :underline nil)
+  
+  ;; Level 5: Baby Blue
+  (set-face-attribute 'org-level-5 nil :foreground "#c5e3f6" :weight 'medium :underline nil)
+
+  ;; Keywords: High Contrast without boxes
+  (setq org-todo-keyword-faces
+        '(("WAIT" . (:foreground "#ffccbc" :weight bold :underline t))
+          ("WORK" . (:foreground "#b2cefe" :weight bold :underline t))
+          ("CLOCKED" . (:foreground "#e0bbe4" :weight bold :underline t))
+          ("CANCEL" . (:foreground "#cfd8dc" :strike-through t)))))
+#+END_SRC
+
+
+* gnus
+#+BEGIN_SRC emacs-lisp
+  (require 'gnus)
+  (require 'smtpmail)    
+
+  ;; === Gnus Setup ===
+  (setq nnimap-split-methods 'default)
+  (setq gnus-split-methods 'gnus-group-split)
+  (setq nnimap-split-inbox "INBOX")
+  (setq nnmail-resplit-incoming t)
+  (setq gnus-ssl-verify-level 0)
+  (setq gnus-directory "~/Gnus/News/")
+  (setq gnus-logo-color-style 'dino)
+  (setq gnus-init-file "~/.emacs.d/config.el")
+  (setq message-default-headers "Cc: \nBcc: ")
+  (setq mm-text-html-renderer 'w3m)
+
+  ;; Personal identity
+  (setq user-full-name "Andrew Metzner")
+  (setq user-mail-address "wizard@unluckylisp.com")
+  (setq message-from-style 'angles) ;; show full From field
+  (setq message-alternative-emails "wizard@unluckylisp.com\\|
+                                            luckless-wizard@riseup.net\\|andrewmetzner@disroot.org")
+
+  ;; SMTP Setup
+  (setq message-send-mail-function 'smtpmail-send-it
+        smtpmail-auth-credentials "~/.authinfo.gpg"
+        smtpmail-stream-type 'starttls
+        message-smtpmail-envelope-from 'header)
+
+
+  (defun my-set-smtp ()
+    "Set SMTP server based on From address."
+    (let ((from (message-field-value "From")))
+      (cond
+       ((string-match "luckless-wizard@riseup.net" from)
+        (setq smtpmail-smtp-server "mail.riseup.net"
+              smtpmail-smtp-service 587))
+       ((string-match "andrewmetzner@disroot.org" from)
+        (setq smtpmail-smtp-server "disroot.org"
+              smtpmail-smtp-service 587))
+       ;; Combine all unluckylisp.com addresses since they share a server
+       ((string-match "@unluckylisp.com" from)
+        (setq smtpmail-smtp-server "unluckylisp.com"
+              smtpmail-smtp-service 587
+              smtpmail-smtp-user (cadr (mail-extract-address-components from))
+              smtpmail-stream-type 'starttls)))))  
+  ;; (defun my-set-smtp ()
+  ;;   "Set SMTP server based on From address."
+  ;;   (let ((from (message-field-value "From")))
+  ;;     (cond
+  ;;      ((string-match "luckless-wizard@riseup.net" from)
+  ;;       (setq smtpmail-smtp-server "mail.riseup.net"
+  ;; 	    ;;	     smtpmail-smtp-user "luckless-wizard@riseup.net"
+  ;;             smtpmail-smtp-service 587))
+  ;;      ((string-match "andrewmetzner@disroot.org" from)
+  ;;       (setq smtpmail-smtp-server "disroot.org"
+  ;; 	    ;;	     smtpmail-smtp-user "andrewmetzner@disroot.org"
+  ;;             smtpmail-smtp-service 587))
+  ;;      ((string-match "wizard@unluckylisp.com" from)
+  ;;       (setq smtpmail-smtp-server "unluckylisp.com"
+  ;;             smtpmail-smtp-service 587
+  ;;             smtpmail-smtp-user "wizard@unluckylisp.com"
+  ;;             smtpmail-stream-type 'starttls))
+  ;;      ((string-match "akai@unluckylisp.com" from)
+  ;;       (setq smtpmail-smtp-server "unluckylisp.com"
+  ;;             smtpmail-smtp-service 587
+  ;;             smtpmail-smtp-user "akai@unluckylisp.com"
+  ;;             smtpmail-stream-type 'starttls))
+  ;;      ((string-match "andrewmetzner@unluckylisp.com" from)
+  ;;       (setq smtpmail-smtp-server "unluckylisp.com"
+  ;;             smtpmail-smtp-service 587
+  ;;             smtpmail-smtp-user "andrewmetzner@unluckylisp.com"
+  ;;             smtpmail-stream-type 'starttls)))))
+
+  (add-hook 'message-send-hook 'my-set-smtp)
+
+  ;; Posting styles for multiple emails
+  (setq gnus-posting-styles
+        '(("luckless-wizard@riseup.net"
+           (address "luckless-wizard@riseup.net")
+           (name "Andrew Metzner")
+           (signature-file "~/.gnus-signatures/riseup"))
+          ("andrewmetzner@disroot.org"
+           (address "andrewmetzner@disroot.org")
+           (name "Andrew Metzner")
+           (signature-file "~/.gnus-signatures/disroot"))
+          ("wizard@unluckylisp.com"
+           (address "wizard@unluckylisp.com")
+           (name "Andrew Metzner")
+           (signature-file "~/.gnus-signatures/unluckylisp"))
+        	("akai@unluckylisp.com"
+           (address "akai@unluckylisp.com")
+           (name "Andrew Metzner")
+           (signature-file "~/.gnus-signatures/unluckylisp"))
+          ("andrewmetzner@unluckylisp.com"
+        	 (address "andrewmetzner@unluckylisp.com")
+           (name "Andrew Metzner")
+           (signature-file "~/.gnus-signatures/unluckylisp"))
+          ))
+
+  ;; IMAP method for RiseUp and Disroot
+  (setq gnus-select-method '(nnnil ""))
+
+  ;; IMAP method for RiseUp and Disroot
+  (setq gnus-select-method '(nnnil ""))
+
+  (add-to-list 'gnus-secondary-select-methods
+               '(nnimap "riseup"
+                        (nnimap-address "mail.riseup.net")
+                        (nnimap-server-port 993)
+                        (nnimap-stream tls)
+                        (nnimap-authinfo-file "~/.authinfo.gpg")
+                        (nnmail-expiry-wait 90)))
+
+  (add-to-list 'gnus-secondary-select-methods
+               '(nnimap "disroot"
+                        (nnimap-address "disroot.org")
+                        (nnimap-server-port 993)
+                        (nnimap-stream tls)
+                        (nnimap-authinfo-file "~/.authinfo.gpg")
+                        (nnmail-expiry-wait 90)))
+  (add-to-list 'gnus-secondary-select-methods
+               '(nnimap "wizard@uL"
+                        (nnimap-address "unluckylisp.com")
+                        (nnimap-server-port 993)
+                        (nnimap-stream ssl)
+                        (nnimap-user "wizard@unluckylisp.com")
+                        (nnimap-authinfo-file "~/.authinfo.gpg")
+                        (nnimap-split-inbox "INBOX")
+                        (nnimap-split-predicate UNSEEN)
+                        (nnimap-split-methods 
+                         (("DeltaChat" "^Chat-Version:.*")
+                          ("INBOX" "")))))
+
+  (add-to-list 'gnus-secondary-select-methods
+               '(nnimap "akai@uL"
+                        (nnimap-address "unluckylisp.com")
+                        (nnimap-server-port 993)
+                        (nnimap-stream ssl)
+                        (nnimap-user "akai@unluckylisp.com")
+                        (nnimap-authinfo-file "~/.authinfo.gpg")
+                        (nnimap-split-inbox "INBOX")
+                        (nnimap-split-predicate UNSEEN)
+                        (nnimap-split-methods 
+                         (("DeltaChat" "^Chat-Version:.*")
+                          ("INBOX" "")))))
+
+  (add-to-list 'gnus-secondary-select-methods
+               '(nnimap "andrewmetzner@uL"
+                        (nnimap-address "unluckylisp.com")
+                        (nnimap-server-port 993)
+                        (nnimap-stream ssl)
+                        (nnimap-user "andrewmetzner@unluckylisp.com")
+                        (nnimap-authinfo-file "~/.authinfo.gpg")
+                        (nnimap-split-inbox "INBOX")
+                        (nnimap-split-predicate UNSEEN)
+                        (nnimap-split-methods 
+                         (("DeltaChat" "^Chat-Version:.*")
+                          ("INBOX" "")))))
+
+  ;; (add-to-list 'gnus-secondary-select-methods
+  ;;              '(nnimap "riseup"
+  ;;                       (nnimap-address "mail.riseup.net")
+  ;;                       (nnimap-server-port 993)
+  ;;                       (nnimap-stream tls)
+  ;;                       (nnimap-authinfo-file "~/.authinfo.gpg")
+  ;;                       (nnmail-expiry-wait 90)))
+
+  ;; (add-to-list 'gnus-secondary-select-methods
+  ;;              '(nnimap "disroot"
+  ;;                       (nnimap-address "disroot.org")
+  ;;                       (nnimap-server-port 993)
+  ;;                       (nnimap-stream tls)
+  ;;                       (nnimap-authinfo-file "~/.authinfo.gpg")
+  ;;                       (nnmail-expiry-wait 90)))
+
+  ;; (add-to-list 'gnus-secondary-select-methods
+  ;;              '(nnimap "wizard@uL"
+  ;;                       (nnimap-address "unluckylisp.com")
+  ;;                       (nnimap-server-port 993)
+  ;;                       (nnimap-stream ssl)
+  ;; 		      (nnimap-user "wizard@unluckylisp.com")
+  ;;                       (nnimap-authinfo-file "~/.authinfo.gpg")))
+  ;;   (add-to-list 'gnus-secondary-select-methods
+  ;;              '(nnimap "akai@uL"
+  ;;                       (nnimap-address "unluckylisp.com")
+  ;;                       (nnimap-server-port 993)
+  ;;                       (nnimap-stream ssl)
+  ;; 		      (nnimap-user "akai@unluckylisp.com")
+  ;;                       (nnimap-authinfo-file "~/.authinfo.gpg")))
+  ;;   (add-to-list 'gnus-secondary-select-methods
+  ;;              '(nnimap "andrewmetzner@uL"
+  ;;                       (nnimap-address "unluckylisp.com")
+  ;;                       (nnimap-server-port 993)
+  ;;                       (nnimap-stream ssl)
+  ;; 		      (nnimap-user "andrewmetzner@unluckylisp.com")
+  ;;                       (nnimap-authinfo-file "~/.authinfo.gpg")))
+
+  ;; Thread sorting
+  (setq gnus-thread-sort-functions
+        '(gnus-thread-sort-by-most-recent-date
+          (not gnus-thread-sort-by-number)))
+  (setq gnus-use-cache t)
+
+  ;; Show all subscribed groups with `o`
+  (defun my-gnus-group-list-subscribed-groups ()
+    "List all subscribed groups, even with zero unread messages."
+    (interactive)
+    (gnus-group-list-all-groups 5))
+  (define-key gnus-group-mode-map (kbd "o") 'my-gnus-group-list-subscribed-groups)
+
+  ;; HTML mail rendering
+  (setq gnus-summary-thread-gathering-function 'gnus-gather-threads-by-subject
+        gnus-thread-hide-subtree t
+        gnus-thread-ignore-subject t
+        gnus-read-active-file 'some
+        mm-text-html-renderer 'w3m)
+
+  (setq browse-url-generic-program "librewolf")
+
+  (define-key gnus-article-mode-map (kbd "H")
+              (lambda ()
+                (interactive)
+                (let ((browse-url-browser-function 'browse-url-generic))
+                  (gnus-article-browse-html-article))))
+
+  ;; Group/topic organization
+  (add-hook 'gnus-group-mode-hook 'gnus-topic-mode)
+  (eval-after-load 'gnus-topic
+    '(progn
+       (setq gnus-message-archive-group '((format-time-string "sent.%Y")))
+       (setq gnus-server-alist
+             '(("archive" nnfolder "archive"
+                (nnfolder-directory "~/Gnus/Mail/archive")
+                (nnfolder-active-file "~/Gnus/Mail/archive/active")
+                (nnfolder-get-new-mail nil)
+                (nnfolder-inhibit-expiry t))))
+       (setq gnus-topic-topology
+             '(("Gnus" visible)
+               (("misc" visible))
+               (("riseup" visible nil nil))
+               (("disroot" visible nil nil))
+               (("wizard@uL" visible nil nil))
+        	     (("akai@uL" visible nil nil))
+        	     (("andrewmetzner@uL" visible nil nil))))
+
+       ;; (setq gnus-topic-topology
+       ;;       '(("Gnus" visible)
+       ;;         (("misc" visible))
+       ;;         (("riseup" visible nil nil))
+       ;; (("disroot" visible nil nil)))) 
+       (setq gnus-topic-alist
+             '(("riseup"
+                "nnimap+riseup:INBOX"
+                "nnimap+riseup:Drafts"
+                "nnimap+riseup:Sent"
+                "nnimap+riseup:Spam"
+                "nnimap+riseup:Trash")
+               ("disroot"
+                "nnimap+disroot:INBOX"
+                "nnimap+disroot:Drafts"
+                "nnimap+disroot:Sent"
+                "nnimap+disroot:Junk"
+                "nnimap+disroot:Trash")
+               ("wizard@uL"
+                "nnimap+wizard@uL:INBOX"
+        	      "nnimap+wizard@uL:DeltaChat"
+        	      "nnimap+wizard@uL:Sent"
+        	      "nnimap+wizard@uL:Trash")
+        	     ("akai@uL"
+                "nnimap+akai@uL:INBOX"
+        	      "nnimap+akai@uL:DeltaChat"
+        	      "nnimap+akai@uL:Sent"
+        	      "nnimap+akai@uL:Trash")
+        	     ("andrewmetzner@uL"
+                "nnimap+andrewmetzner@uL:INBOX"
+        	      "nnimap+andrewmetzner@uL:DeltaChat"
+        	      "nnimap+andrewmetzner@uL:Sent"
+        	      "nnimap+andrewmetzner@uL:Trash")  	      
+               ("misc")
+               ("Gnus")))
+
+       (gnus-topic-set-parameters "riseup" '((display . 200)))
+       (gnus-topic-set-parameters "disroot" '((display . 200)))
+       (gnus-topic-set-parameters "wizard@uL" '((display . 200)))
+       (gnus-topic-set-parameters "akai@uL" '((display . 200)))
+       (gnus-topic-set-parameters "andrewmetzner@uL" '((display . 200)))
+       ))
+
+  (setq epa-file-cache-passphrase-for-symmetric-encryption t)
+
+  ;; MIME handling
+  (eval-after-load 'mailcap
+    '(progn
+       (cond
+        ((eq system-type 'darwin))
+        ((eq system-type 'windows-nt))
+        (t (mailcap-parse-mailcaps)))))
+
+#+END_SRC
+
+
+* org-pomodoro
+#+BEGIN_SRC emacs-lisp
+
+  (add-to-list 'load-path "~/.emacs.d/site-lisp/org-pomodoro")
+  (require 'org-pomodoro)
+
+  (setq org-pomodoro-keep-killed-pomodoro-time t)
+  (setq org-pomodoro-clock-break nil)
+  (setq org-pomodoro-finished-sound "~/.emacs.d/site-lisp/org-pomodoro/pomodoro.wav")
+  (setq org-pomodoro-finished-sound-p t)
+  (setq org-pomodoro-length 25)
+  (setq org-pomodoro-short-break-length 5)
+  (setq org-pomodoro-long-break-length 20)
+  (setq org-pomodoro-long-break-sound "~/.emacs.d/site-lisp/org-pomodoro/pomodoro.wav")
+  (setq org-pomodoro-short-break-sound "~/.emacs.d/site-lisp/org-pomodoro/pomodoro.wav")
+  (setq org-pomodoro-ticking-sound-p nil)
+
+  (global-set-key (kbd "C-c p") #'org-pomodoro-toggle-pause)
+  (global-set-key (kbd "C-c s") #'org-pomodoro)
+
+  (setq org-pomodoro-auto-start t)
+
+#+END_SRC
+
+
+* emms
+#+BEGIN_SRC emacs-lisp
+
+  (use-package emms
+    :ensure t
+    :config
+    (require 'emms-setup)
+    (require 'emms-player-mpd)
+    (emms-all)
+    
+    (setq emms-repeat-playlist t)
+    (setq emms-mode-line-format "🎵") ; %s if want trackname
+    (emms-mode-line 1)
+    (emms-playing-time 1)
+
+    (setq emms-seek-seconds 5)
+    (setq emms-player-list '(emms-player-mpd))
+    (setq emms-info-functions '(emms-info-mpd))
+    (setq emms-player-mpd-server-name "localhost")
+    (setq emms-player-mpd-server-port "6601")
+    :bind
+    ("s-m p" . emms)
+    ("s-m b" . emms-smart-browse)
+    ("s-m r" . emms-player-mpd-update-all-reset-cache)
+    ("s-m 1" . my/emms-previous)
+    ("s-m 2" . my/emms-next)
+    ("s-m 3" . emms-pause)
+    ("s-m 4" . my/emms-stop)
+    ("s-m 5" . my/emms-random)
+    ("s-m 6" . my/emms-shuffle)
+    ("s-m t" . emms-show))
+
+  (setq mpc-host "localhost:6601")
+
+  (defun my/emms-shuffle ()
+    "Toggle EMMS shuffle playlist and show a message."
+    (interactive)
+    (emms-shuffle)
+    (message "Playlist shuffled"))
+
+  (defun my/emms-previous ()
+    "Play the previous track and show a message."
+    (interactive)
+    (emms-previous)
+    (message "Playing previous track"))
+
+  (defun my/emms-next ()
+    "Play the next track and show a message."
+    (interactive)
+    (emms-next)
+    (message "Playing next track"))
+
+  (defun my/emms-stop ()
+    "Stop the playback and show a message."
+    (interactive)
+    (emms-stop)
+    (message "Playback stopped"))
+
+  (defun my/emms-random ()
+    "Toggle random play and show a message."
+    (interactive)
+    (emms-random)
+    (message "Playing random track"))
+
+  (defun mpd/start-music-daemon ()
+    "Start MPD, connects to it and syncs the metadata cache."
+    (interactive)
+    (shell-command "mpd")
+    (mpd/update-database)
+    (emms-player-mpd-connect)
+    (emms-cache-set-from-mpd-all)
+    (message "MPD Started!"))
+  (global-set-key (kbd "s-m c") 'mpd/start-music-daemon)
+
+  (defun mpd/kill-music-daemon ()
+    "Stops playback and kill the music daemon."
+    (interactive)
+    (emms-stop)
+    (call-process "killall" nil nil nil "mpd")
+    (message "MPD Killed!"))
+  (global-set-key (kbd "s-m k") 'mpd/kill-music-daemon)
+
+  (defun mpd/update-database ()
+    "Updates the MPD database synchronously."
+    (interactive)
+    (call-process "mpc" nil nil nil "update")
+    (message "MPD Database Updated!"))
+  (global-set-key (kbd "s-m u") 'mpd/update-database)
+
+  (global-set-key (kbd "s-m x") #'emms-playlist-clear)
+
+#+END_SRC
+
+
+* erc
+#+BEGIN_SRC emacs-lisp
+  (require 'erc)
+
+  (setq erc-fill-column 100
+        erc-fill-function 'erc-fill-static
+        erc-fill-static-center 20)
+
+  (setq erc-fill-function 'erc-fill-wrap)
+  (setq erc-fill-wrap-visual-keys t)
+  (setq erc-insert-timestamp-function 'erc-insert-timestamp-right)
+
+  (setq erc-modules
+        '(autojoin button completion fill fill-wrap irccontrols list log match
+                   menu move-to-prompt netsplit networks nicks noncommands
+                   readonly ring scrolltobottom services smiley stamp track
+                   unmorse))
+
+  (setq erc-scrolltobottom-all t)
+  (setq erc-stamp-mode t)
+  (setq erc-truncate-mode t)
+
+  (setq package-selected-packages '(emms jabber org w3m))
+  (setq scroll-bar-mode nil)
+
+  (setq erc-show-speaker-membership-status t)
+
+  (defun husk ()
+    (interactive)
+    
+    ;; (setq erc-use-auth-source-for-nickserv-password t)
+
+    ;; (setq erc-auth-source-server-function #'erc-auth-source-search)
+
+    (erc-tls :server "irc.husk.site"
+             :port 6697
+             :nick "LOGIN__NOW"
+             :user "akai"
+             :full-name "..."
+             :id 'husk))
+
+
+#+END_SRC
+
+
+
+* mail
+#+BEGIN_SRC emacs-lisp
+
+       (setq user-full-name "Andrew Metzner")
+
+      (defvar my-email-addresses
+        '(("riseup" . "luckless-wizard@riseup.net")
+          ("disroot" . "andrewmetzner@disroot.org")
+          ("wizard@uL" . "wizard@unluckylisp.com")
+          ("akai@uL" . "akai@unluckylisp.com")
+  	("andrewmetzner@uL" . "andrewmetzner@unluckylisp.com"))
+        "Alist of email accounts to choose from.")
+
+      (defun my-select-from-address ()
+        "Prompt to select a From address when composing a new mail."
+        (when (eq major-mode 'message-mode)
+          (let* ((choice (completing-read "Choose From address: "
+                                          (mapcar 'car my-email-addresses)))
+                 (email (cdr (assoc choice my-email-addresses))))
+            (when email
+              (message-remove-header "From")
+              (message-add-header (concat "From: Andrew Metzner <" email ">"))
+              (setq user-mail-address email)
+              (setq user-full-name "Andrew Metzner")))))
+
+      (add-hook 'message-setup-hook 'my-select-from-address)
+
+
+#+END_SRC
+
+
+* jabber
+#+BEGIN_SRC emacs-lisp
+  
+  (setq jabber-vcard-avatars-retrieve nil)
+  (setq jabber-chat-buffer-show-avatar nil)
+
+  (defun my-jabber-get-password (server user)
+    "Retrieve Jabber password for USER@SERVER from authinfo.gpg."
+    (let ((found (auth-source-search
+                  :host server
+                  :user user
+                  :require '(:user :secret)
+                  :max 1)))
+      (if found
+          (let ((secret (plist-get (car found) :secret)))
+            (if (functionp secret)
+                (funcall secret)
+              secret))
+        (error "No credentials found for %s@%s" user server))))
+
+  (defun jabber-sconnect ()
+    "Securely fetch password, set up account, then start Jabber."
+    (interactive)
+    (let* ((jid "akai@magicbroccoli.de")
+           (pass (my-jabber-get-password "magicbroccoli.de" jid)))
+      (setq jabber-account-list
+            `((,jid (:password . ,pass))))
+      (call-interactively 'jabber-connect)))
+
+
+#+END_SRC
+
+
+* pdf-tools
+#+BEGIN_SRC emacs-lisp
+    (require 'pdf-tools)
+    (pdf-tools-install)
+
+    (add-hook 'pdf-view-mode-hook (lambda () (pdf-view-midnight-minor-mode 1)))
+
+    (setq pdf-view-midnight-colors '("#FFFFFF" . "#000000")) ;; Customize as needed
+
+    ;; (setq pdf-view-resize-factor 1.1)
+
+    (setq-default doc-view-setup-function #'pdf-view-setup)
+
+    (define-key pdf-view-mode-map (kbd "C-c m") #'pdf-view-midnight-minor-mode)
+
+  (define-key pdf-view-mode-map (kbd "g") nil)
+  (define-key pdf-view-mode-map (kbd "g g") 'pdf-view-first-page)
+  (define-key pdf-view-mode-map (kbd "G") 'pdf-view-last-page)
+  (define-key pdf-view-mode-map (kbd "e") 'pdf-view-goto-page)
+  (define-key pdf-view-mode-map (kbd "r") 'pdf-view-revert-buffer)
+  (define-key pdf-view-mode-map (kbd "a") 'pdf-annot-add-text-annotation)
+  (define-key pdf-view-mode-map (kbd "d") 'pdf-annot-delete)
+  (define-key pdf-view-mode-map (kbd "h") 'pdf-annot-add-highlight-markup-annotation)
+  (define-key pdf-view-mode-map (kbd "~") 'pdf-annot-add-squiggly-markup-annotation)
+  (define-key pdf-view-mode-map (kbd "u") 'pdf-annot-add-underline-markup-annotation)
+  (define-key pdf-view-mode-map (kbd "s") 'pdf-annot-add-strikeout-markup-annotation)
+
+  (require 'saveplace-pdf-view) ; last place
+  (save-place-mode 1)
+
+#+END_SRC
+
+
+* auctex
+#+BEGIN_SRC emacs-lisp
+    (use-package auctex
+      :ensure t)
+
+  (setq TeX-source-correlate-method 'synctex)
+  (setq TeX-source-correlate-mode t)
+
+  (setq TeX-command-default "LaTeX")
+
+#+END_SRC
+
+
+* latex
+#+BEGIN_SRC emacs-lisp
+  ;; ;; use C-c C-x C-l
+  ;; ;; Set default size of LaTeX previews (images of LaTeX formulas)
+  ;; (setq org-latex-preview-latex-fragment '(
+  ;;    ;; Scale factor for latex previews
+  ;;    :scale 5.0  ;; Adjust this value to make it larger or smaller (default is 1.0)
+  ;;    :foreground "black"
+  ;;    :background "Transparent"
+  ;; ))
+
+  ;; ;; LaTeX preview settings
+  ;; (setq org-latex-preview-default 'dvipng)  ;; Use dvipng for LaTeX preview
+  ;; (setq org-latex-create-formula-image-program 'dvipng)  ;; Use dvipng for rendering
+
+#+END_SRC
+
+
+* org-latex-preview
+#+BEGIN_SRC emacs-lisp
+  ;; Customize org-format-latex-options
+  (setq org-format-latex-options
+        '(:foreground "Yellow"      ;; Set LaTeX image text color to Yellow
+          :background "Transparent"  ;; Set transparent background for images
+          :scale 2.0                  ;; Increase the scaling factor to make the formul;; as larger
+          ;; :html-foreground "Yellow"    ;; Set yellow text color for LaTeX formulas in HTML export
+          ;; :html-background "Transparent" ;; Transparent background in HTML
+          ;; :html-scale 2.0             ;; Scale LaTeX formulas in HTML export
+          :matchers ("begin" "$" "$$" "\\(" "\\["))) ;; Match various LaTeX math fragments
+#+END_SRC
+
+
+* gikomacs
+#+BEGIN_SRC emacs-lisp
+  ;; Gikopoi                                                                                                        
+  (setq gikopoi-default-server "play.gikopoi.com")
+  (setq gikopoi-default-area "for")
+  (setq gikopoi-default-name "Spy#testing")
+  (setq gikopoi-default-character "pumpkinhead")
+
+
+#+END_SRC
