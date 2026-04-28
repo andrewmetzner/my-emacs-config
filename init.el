@@ -18,7 +18,10 @@
  '(jabber-chat-buffer-show-avatar nil t)
  '(jabber-vcard-avatars-retrieve nil t)
  '(org-pomodoro-audio-player "paplay")
- '(package-selected-packages nil)
+ '(package-selected-packages
+   '(auctex bbdb company dashboard emms htmlize jabber lsp-java
+	    melpa-upstream-visit org-noter-pdftools org-pomodoro
+	    projectile saveplace-pdf-view simple-httpd w3m websocket))
  '(pdf-annot-default-annotation-properties
    '((t (label . "Andrew Metzner"))
      (text (color . "#ff0000") (icon . "Note"))
@@ -40,4 +43,5 @@
  '(jabber-roster-user-away ((t (:foreground "yellow" :slant italic :weight normal))))
  '(jabber-roster-user-online ((t (:foreground "cyan" :slant normal :weight bold))))
  '(jabber-title-large ((t (:inherit variable-pitch :weight bold :height 2.0 :width ultra-expanded))))
- '(jabber-title-medium ((t (:inherit variable-pitch :weight bold :height 1.5 :width expanded)))))
+ '(jabber-title-medium ((t (:inherit variable-pitch :weight bold :height 1.5 :width expanded))))
+ '(pdf-view-midnight-colors ("#FFFFFF" . "#000000")))

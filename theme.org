@@ -117,14 +117,15 @@
 
 * Custom Set Variables & Faces
 #+BEGIN_SRC emacs-lisp
-  (custom-set-faces
-   '(erc-current-nick-face ((t (:foreground "red" :weight bold))))
-   '(jabber-roster-user-online ((t (:foreground "cyan" :slant normal :weight bold))))
-   '(pdf-view-midnight-colors '("#FFFFFF" . "#000000")))
-
-  (custom-set-variables
-   '(org-pomodoro-audio-player "paplay")
-   '(pdf-annot-default-annotation-properties
-     '((t (label . "Andrew Metzner"))
-       (text (color . "#ff0000") (icon . "Note")))))
+    (custom-set-faces
+     '(erc-current-nick-face ((t (:foreground "red" :weight bold))))
+     '(jabber-roster-user-online ((t (:foreground "cyan" :slant normal :weight bold))))
+     ;; '(pdf-view-midnight-colors '("#FFFFFF" . "#000000")))
+  '(pdf-view-midnight-colors ("#FFFFFF" . "#000000")))
+  
+    (custom-set-variables
+     '(org-pomodoro-audio-player "paplay")
+     '(pdf-annot-default-annotation-properties
+       '((t (label . "Andrew Metzner"))
+         (text (color . "#ff0000") (icon . "Note")))))
 #+END_SRC
