@@ -78,8 +78,9 @@
 
       (setq dashboard-projects-backend 'projectile)
 
-      (setq dashboard-items '((recents  . 5)
-                              (projects . 5)))
+      (setq dashboard-items '((recents   . 5)
+                              (bookmarks . 5)
+                              (projects  . 5)))
 
       (setq dashboard-footer-messages
             (list (concat (my-anniversary-ymd-string 2018 10 16 "Clean") "  |  "
@@ -87,7 +88,22 @@
                           (my-anniversary-ymd-string 2026 01 01 "<3"))))
 
       (dashboard-setup-startup-hook)
-      (dashboard-refresh-buffer))
+      (dashboard-refresh-buffer)
+
+      (defun my/dashboard-unpin-at-point ()
+        "Delete the bookmark under point in the dashboard, then refresh."
+        (interactive)
+        (let* ((line (string-trim-left (or (thing-at-point 'line t) "")))
+               (name (car (split-string line " - " t " +"))))
+          (if (and name (member name (bookmark-all-names)))
+              (progn
+                (bookmark-delete name)
+                (bookmark-save)
+                (dashboard-refresh-buffer)
+                (message "Unpinned \"%s\"" name))
+            (message "No bookmark at point"))))
+
+      (define-key dashboard-mode-map (kbd "u") #'my/dashboard-unpin-at-point))
 #+END_SRC
 * Component Styling
 #+BEGIN_SRC emacs-lisp

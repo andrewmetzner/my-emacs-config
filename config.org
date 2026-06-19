@@ -90,6 +90,7 @@
           calendar-mark-holidays-flag t)
 
     ;; HTML export postamble: Emacs version + last modified date
+    ;; wiz.png appears via CSS #postamble::before
     (setq org-html-postamble t
           org-html-postamble-format
           '(("en" "<p class=\"postamble\">Last modified: %C<br>%c</p>")))
@@ -102,6 +103,10 @@
     ;; LaTeX Export & Viewer (The Overleaf Bridge)
     (setq org-latex-pdf-process '("latexmk -f -pdf -interaction=nonstopmode -output-directory=%o %f"))
     (setq org-file-apps '((auto-mode . emacs) ("\\.pdf\\'" . pdf-view-mode)))
+
+    ;; Global hyperref defaults: blue colored links, no boxes or borders
+    (setq org-latex-hyperref-template
+          "\\hypersetup{\n pdfauthor={%a},\n pdftitle={%t},\n pdfkeywords={%k},\n pdfsubject={%d},\n pdfcreator={%c},\n pdflang={%L},\n colorlinks=true,\n linkcolor=blue,\n urlcolor=blue,\n citecolor=blue\n}\n")
 
 
     ;; UI Hooks & Functions
@@ -117,9 +122,37 @@
     (add-hook 'org-mode-hook #'visual-line-mode)
     (add-hook 'org-mode-hook #'my/org-add-greentext)
 
+    (defun my/pin-to-favorites ()
+      "Bookmark the current buffer's directory and register it with projectile.
+Appears in the dashboard bookmarks widget and projectile project list."
+      (interactive)
+      (let* ((dir (if (buffer-file-name)
+                      (file-name-directory (buffer-file-name))
+                    default-directory))
+             (suggested (if (buffer-file-name)
+                            (file-name-sans-extension (file-name-nondirectory (buffer-file-name)))
+                          (file-name-nondirectory (directory-file-name dir))))
+             (name (read-string (format "Pin as [%s]: " suggested) nil nil suggested)))
+        (if (string-blank-p name)
+            (message "Cancelled: name cannot be blank")
+          (bookmark-set name)
+          (bookmark-save)
+          (projectile-add-known-project dir)
+          (message "Pinned \"%s\" → %s" name dir))))
+
+    (defun my/unpin-favorite ()
+      "Remove a bookmark by name with completion."
+      (interactive)
+      (let ((name (completing-read "Unpin: " (bookmark-all-names) nil t)))
+        (bookmark-delete name)
+        (bookmark-save)
+        (message "Unpinned \"%s\"" name)))
+
     (with-eval-after-load 'org
       (define-key org-mode-map (kbd "C-c t") 'insert-system-time)
       (define-key org-mode-map (kbd "<f5>") 'my/org-latex-export-and-view)
+      (define-key org-mode-map (kbd "C-c f") #'my/pin-to-favorites)
+      (define-key org-mode-map (kbd "C-c u") #'my/unpin-favorite)
 
       ;; Heading Levels
       (set-face-attribute 'org-level-1 nil :foreground "#fdfd96" :background "#3E3B2E" :weight 'ultra-bold :height 1.3 :underline "#fdfd96")
@@ -134,6 +167,8 @@
               ("WORK" . (:foreground "#b2cefe" :weight bold :underline t))
               ("CLOCKED" . (:foreground "#e0bbe4" :weight bold :underline t))
               ("CANCEL" . (:foreground "#cfd8dc" :strike-through t)))))
+
+    (global-set-key (kbd "<f6>") #'dashboard-refresh-buffer)
         
 #+END_SRC
 
@@ -866,5 +901,132 @@ gnus-posting-styles based on which group you're in — no prompt needed."
         (call-process "git" nil nil nil "push"))))
 
   (add-hook 'after-save-hook #'my/org-git-push)
+#+END_SRC
+
+* unluckylisp build
+#+BEGIN_SRC emacs-lisp
+;;; Build directories
+(defvar luckless-ul-dir "/home/akai/prog/user/unluckylisp"
+  "Root of the unluckylisp personal site directory.")
+
+(defvar luckless-orig-dir "/home/akai/prog/user/unluckylisp-build"
+  "Original build directory (unluckylisp-build Makefile).")
+
+(defvar luckless-public-dir "/home/akai/prog/user/luckless"
+  "Root of the public luckless repo (distributable, no personal content).")
+
+;;; Low-level runner — opens a *compilation* buffer
+(defun luckless--run (makefile-dir target)
+  "Run make TARGET with MAKEFILE-DIR as default-directory."
+  (let ((default-directory makefile-dir))
+    (compile (format "make %s" target))))
+
+;;; ── uL commands (M-x luckless-ul-*) ──────────────────────────────
+
+(defun luckless-ul-all ()
+  "uL: build everything — static assets, catswithsicp, site pages, blog."
+  (interactive)
+  (luckless--run luckless-ul-dir "all"))
+
+(defun luckless-ul-site ()
+  "uL: export pages/ .org files → out/ using merge/site/ templates."
+  (interactive)
+  (luckless--run luckless-ul-dir "site"))
+
+(defun luckless-ul-blog ()
+  "uL: run gikoru (posts/ → out/blog/)."
+  (interactive)
+  (luckless--run luckless-ul-dir "blog"))
+
+(defun luckless-ul-catswithsicp ()
+  "uL: regenerate catswithsicp page from pages/catswithsicp/image/."
+  (interactive)
+  (luckless--run luckless-ul-dir "catswithsicp"))
+
+(defun luckless-ul-static ()
+  "uL: sync static/ assets (CSS, images, favicon) → out/."
+  (interactive)
+  (luckless--run luckless-ul-dir "static"))
+
+(defun luckless-ul-clean ()
+  "uL: delete out/ (generated files only — sources untouched)."
+  (interactive)
+  (when (yes-or-no-p "Delete out/ in unluckylisp? ")
+    (luckless--run luckless-ul-dir "clean")))
+
+;;; ── Original build commands (M-x luckless-orig-*) ────────────────
+
+(defun luckless-orig-all ()
+  "Original build: export site + run gikoru."
+  (interactive)
+  (luckless--run luckless-orig-dir "all"))
+
+(defun luckless-orig-site ()
+  "Original build: export unluckylisp-site .org files."
+  (interactive)
+  (luckless--run luckless-orig-dir "site"))
+
+(defun luckless-orig-blog ()
+  "Original build: run gikoru on ganzu-gikoru."
+  (interactive)
+  (luckless--run luckless-orig-dir "blog"))
+
+;;; ── luckless public repo commands (M-x luckless-pub-*) ──────────
+
+(defun luckless-pub-all ()
+  "luckless public repo: build everything."
+  (interactive)
+  (luckless--run luckless-public-dir "all"))
+
+(defun luckless-pub-site ()
+  "luckless public repo: export pages/ → out/."
+  (interactive)
+  (luckless--run luckless-public-dir "site"))
+
+(defun luckless-pub-blog ()
+  "luckless public repo: run gikoru (posts/ → out/blog/)."
+  (interactive)
+  (luckless--run luckless-public-dir "blog"))
+
+(defun luckless-pub-static ()
+  "luckless public repo: sync static/ assets → out/."
+  (interactive)
+  (luckless--run luckless-public-dir "static"))
+
+(defun luckless-pub-clean ()
+  "luckless public repo: delete out/."
+  (interactive)
+  (when (yes-or-no-p "Delete out/ in luckless? ")
+    (luckless--run luckless-public-dir "clean")))
+
+;;; ── Dispatcher (M-x luckless-build) ──────────────────────────────
+;;; Prompts for a target with completion — the single entry point.
+
+(defun luckless-build (target)
+  "Run a luckless build TARGET (with completion).
+Use this as your main entry point: M-x luckless-build RET <target> RET."
+  (interactive
+   (list (completing-read
+          "Build target: "
+          '("uL:all" "uL:site" "uL:blog" "uL:catswithsicp" "uL:static" "uL:clean"
+            "pub:all" "pub:site" "pub:blog" "pub:static" "pub:clean"
+            "orig:all" "orig:site" "orig:blog")
+          nil t)))
+  (pcase target
+    ("uL:all"          (luckless-ul-all))
+    ("uL:site"         (luckless-ul-site))
+    ("uL:blog"         (luckless-ul-blog))
+    ("uL:catswithsicp" (luckless-ul-catswithsicp))
+    ("uL:static"       (luckless-ul-static))
+    ("uL:clean"        (luckless-ul-clean))
+    ("pub:all"         (luckless-pub-all))
+    ("pub:site"        (luckless-pub-site))
+    ("pub:blog"        (luckless-pub-blog))
+    ("pub:static"      (luckless-pub-static))
+    ("pub:clean"       (luckless-pub-clean))
+    ("orig:all"        (luckless-orig-all))
+    ("orig:site"       (luckless-orig-site))
+    ("orig:blog"       (luckless-orig-blog))
+    (_                 (message "Unknown target: %s" target))))
 #+END_SRC
 
